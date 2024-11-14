@@ -1,6 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { Category } from "./Category.entity";
-import { Post } from "src/posts/entities/post.entity";
+import { Post } from "src/common/entities/post.entity";
 
 @Entity()
 export class Service {
@@ -20,6 +20,6 @@ export class Service {
   @Column({ nullable: true })
   icon: string;
 
-  @OneToMany(() => Post, (post) => post.service)
+  @OneToMany(() => Post, (post) => post.service,{onDelete:"CASCADE",onUpdate:"CASCADE"})
   posts: Post[];
 }

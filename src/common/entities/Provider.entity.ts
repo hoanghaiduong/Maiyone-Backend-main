@@ -1,4 +1,4 @@
-import { Post } from "src/posts/entities/post.entity";
+import { Post } from "src/common/entities/post.entity";
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity()
@@ -9,6 +9,6 @@ export class Provider {
   @Column()
   name: string;
 
-  @OneToMany(() => Post, (post) => post.provider)
+  @OneToMany(() => Post, (post) => post.provider,{onDelete:"CASCADE",onUpdate:"CASCADE"})
   posts: Post[];
 }

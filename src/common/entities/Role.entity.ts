@@ -1,5 +1,5 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
-import { User } from "./User.entity";
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { User } from './User.entity';
 
 @Entity()
 export class Role {
@@ -9,9 +9,12 @@ export class Role {
   @Column()
   name: string;
 
-  @Column()
+  @Column({ nullable: true })
   description: string;
 
-  @OneToMany(() => User, (user) => user.role)
+  @OneToMany(() => User, (user) => user.role, {
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  })
   users: User[];
 }
