@@ -12,8 +12,8 @@ import { RolesGuard } from './auth/guard/role-auth.guard';
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
-  @UseGuards(RolesGuard)
-  @Roles(ERole.USER)
+  @Roles(ERole.GUEST)
+  @UseGuards(JwtAuthGuard)
   @Get()
   getHello(@AuthUser() user:any): string {
     return user;

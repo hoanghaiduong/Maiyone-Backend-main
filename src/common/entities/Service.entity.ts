@@ -1,6 +1,14 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
-import { Category } from "./Category.entity";
-import { Post } from "src/common/entities/post.entity";
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import { Category } from './Category.entity';
+import { Post } from 'src/common/entities/post.entity';
+import { Provider } from './Provider.entity';
 
 @Entity()
 export class Service {
@@ -10,16 +18,24 @@ export class Service {
   @Column()
   name: string;
 
-  @ManyToOne(() => Category, (category) => category.services)
+  @Column({ nullable: false })
+  path: string;
+  @Column({ nullable: true })
+  description?: string;
+  @Column({ nullable: true })
+  thumbnail?: string;
+  @Column({ nullable: true, type: 'json' })
+  images?: string[];
+
+  @ManyToOne(() => Category, (category) => category.services, {
+    nullable: false,
+  })
   @JoinColumn()
   category: Category;
 
-  @Column()
-  path: string;
-
-  @Column({ nullable: true })
-  icon: string;
-
-  @OneToMany(() => Post, (post) => post.service,{onDelete:"CASCADE",onUpdate:"CASCADE"})
-  posts: Post[];
+  @ManyToOne(() => Provider, (provider) => provider.services, {
+    nullable: false,
+  })
+  @JoinColumn()
+  provider: Provider;
 }

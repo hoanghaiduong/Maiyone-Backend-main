@@ -18,9 +18,6 @@ export class Post {
   @JoinColumn()
   category: Category;
 
-  @ManyToOne(() => Service, (service) => service.posts, { nullable: true })
-  @JoinColumn()
-  service: Service;
 
   @ManyToOne(() => Provider, (provider) => provider.posts, { nullable: true })
   @JoinColumn()

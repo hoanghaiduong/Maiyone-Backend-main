@@ -20,6 +20,7 @@ export class UsersService implements OnModuleInit {
   async getUserById(id: string): Promise<User> {
     const user = await this.usersRepository
       .createQueryBuilder('user')
+      .leftJoinAndSelect('user.role', 'role')
       .where('user.id = :id', { id })
       .getOne();
     if (!user) {
@@ -41,11 +42,11 @@ export class UsersService implements OnModuleInit {
 
     return this.usersRepository
       .createQueryBuilder('user')
+      .leftJoinAndSelect('user.role', 'role')
       .where(`user.${field} = :value`, { value })
       .getOne();
   }
 
-  
   async createUser(createUserDto: CreateUserDto): Promise<User> {
     const queryRunner: QueryRunner =
       this.usersRepository.manager.connection.createQueryRunner();
@@ -90,7 +91,7 @@ export class UsersService implements OnModuleInit {
 
   async findAll(pagination: Pagination): Promise<PaginationModel<User>> {
     const queryBuilder = this.usersRepository.createQueryBuilder('user');
-
+    queryBuilder.leftJoinAndSelect("user.role","role");
     if (pagination.search) {
       queryBuilder.where(
         'user.username LIKE :search OR user.email LIKE :search',

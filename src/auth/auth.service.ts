@@ -73,15 +73,19 @@ export class AuthService {
     if (!user) {
       throw new ApiException(
         ErrorMessages.USER_NOT_FOUND,
-        username ? 'Username is not correct' : 'Email is not correct',
+        'Username is not correct or Email is not correct',
       );
     }
-    if (user.username !== username) {
-      throw new ApiException(
-        ErrorMessages.USER_NOT_FOUND,
-        'Username is not correct',
-      );
+  
+    if (username !== undefined) {
+      if (user.username !== username) {
+        throw new ApiException(
+          ErrorMessages.USER_NOT_FOUND,
+          'Username is not correct',
+        );
+      }
     }
+
     // Validate password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
