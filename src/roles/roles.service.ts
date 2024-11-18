@@ -112,4 +112,12 @@ export class RolesService implements OnModuleInit {
       });
     return role;
   }
+  async findOneByName(name: string): Promise<Role> {
+    const role = await this.roleRepository.findOneBy({ name });
+    if (!role)
+      throw new NotFoundException({
+        message: 'Role not found',
+      });
+    return role;
+  }
 }

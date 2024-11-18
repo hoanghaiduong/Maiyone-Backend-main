@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -9,6 +14,10 @@ import { Meta } from 'src/common/pagination/meta.dto';
 import { Pagination } from 'src/common/pagination/pagination.dto';
 import { CategoriesService } from 'src/categories/categories.service';
 import { ProvidersService } from 'src/providers/providers.service';
+import { arrayNotEmpty, isNotEmpty } from 'class-validator';
+import { MulterUtils } from 'src/common/utils/multer.utils';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class ServicesService {
@@ -18,7 +27,11 @@ export class ServicesService {
     private readonly categoryService: CategoriesService,
     private readonly providerService: ProvidersService,
   ) {}
-  async create(createServiceDto: CreateServiceDto): Promise<Service> {
+  async create(
+    createServiceDto: CreateServiceDto,
+    images: Express.Multer.File[],
+    thumbnail: Express.Multer.File,
+  ): Promise<Service> {
     const queryRunner: QueryRunner =
       this.serviceRepository.manager.connection.createQueryRunner();
 
@@ -29,19 +42,21 @@ export class ServicesService {
       const category = await this.categoryService.findOne(
         createServiceDto.categoryId,
       );
-      if (!category) {
-        throw new NotFoundException('Category not found');
-      }
+
       const provider = await this.providerService.findOne(
         createServiceDto.providerId,
       );
-      if (!provider) {
-        throw new NotFoundException('Provider not found');
-      }
+
       const service = queryRunner.manager.create(Service, {
         ...createServiceDto,
         category,
         provider,
+        thumbnail: isNotEmpty(thumbnail)
+          ? MulterUtils.convertPathToUrl(thumbnail.path)
+          : null,
+        images: arrayNotEmpty(images)
+          ? MulterUtils.convertArrayPathToUrl(images.map((item) => item.path))
+          : null,
       });
 
       const savedService = await queryRunner.manager.save(service);
@@ -49,14 +64,31 @@ export class ServicesService {
       return savedService;
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      throw error;
+      if (thumbnail?.path) {
+        MulterUtils.deleteFile(thumbnail.path);
+      }
+
+      if (images && images.length > 0) {
+        try {
+          console.log(
+            `Attempting to delete images: ${images.map((item) => item.path)}`,
+          );
+          MulterUtils.deleteFiles(images.map((item) => item.path));
+        } catch (err) {
+          console.error(`Failed to delete images`, err);
+        }
+      }
+
+      throw new BadRequestException({
+        message: error.message,
+      });
     } finally {
       await queryRunner.release();
     }
   }
 
   async findAll(pagination: Pagination): Promise<PaginationModel<Service>> {
-    const queryBuilder = this.serviceRepository.createQueryBuilder('service');
+    const queryBuilder = this.serviceRepository.createQueryBuilder('service').leftJoinAndSelect('service.provider','provider').leftJoinAndSelect('service.category','category');
 
     if (pagination.search) {
       queryBuilder.where('service.name LIKE :search', {
@@ -90,10 +122,38 @@ export class ServicesService {
     }
     return service;
   }
+  async findOneRelation(id: number): Promise<Service> {
+    const service = await this.serviceRepository.findOne({
+      where: { id },
+      relations: ['category', 'provider'],
+    });
+    if (!service) {
+      throw new NotFoundException('Service not found');
+    }
+    return service;
+  }
+  async findBySlug(path: string): Promise<Service> {
+   
+    try {
+      const service = await this.serviceRepository.findOne({
+        where: { path},
+        relations: ['category', 'provider'],
+      });
+      if (!service) {
+        throw new NotFoundException('Service not found');
+      }
+      return service;
+    } catch (error) {
+      console.log(error);
+      throw new BadRequestException(error);
+    }
+  }
 
   async update(
     id: number,
     updateServiceDto: UpdateServiceDto,
+    images?: Express.Multer.File[],
+    thumbnail?: Express.Multer.File,
   ): Promise<Service> {
     const queryRunner: QueryRunner =
       this.serviceRepository.manager.connection.createQueryRunner();
@@ -102,14 +162,17 @@ export class ServicesService {
     await queryRunner.startTransaction();
 
     try {
+      // Lấy thông tin Service hiện tại
       const service = await queryRunner.manager.findOne(Service, {
         where: { id },
-        relations:['category','provider']
+        relations: ['category', 'provider'],
       });
 
       if (!service) {
         throw new NotFoundException('Service not found');
       }
+
+      // Xử lý thay đổi category
       if (service.category.id !== updateServiceDto.categoryId) {
         const category = await this.categoryService.findOne(
           updateServiceDto.categoryId,
@@ -119,29 +182,57 @@ export class ServicesService {
         }
         service.category = category;
       }
-      if(service.provider.id !== updateServiceDto.providerId) {
+
+      // Xử lý thay đổi provider
+      if (service.provider.id !== updateServiceDto.providerId) {
         const provider = await this.providerService.findOne(
           updateServiceDto.providerId,
         );
         if (!provider) {
           throw new NotFoundException('Provider not found');
         }
-        service.provider=provider;
+        service.provider = provider;
       }
 
-    
-      const updatedService = queryRunner.manager.merge(
-        Service,
-        service,
-        updateServiceDto,
-      );
-      await queryRunner.manager.save(updatedService);
+      // Xóa ảnh cũ (nếu có) trước khi gán ảnh mới
+      if (thumbnail && service.thumbnail) {
+        MulterUtils.deleteFile(service.thumbnail);
+      }
+      if (images && service.images) {
+        MulterUtils.deleteFiles(service.images);
+      }
+
+      // Gán ảnh mới
+      const updatedService = queryRunner.manager.merge(Service, service, {
+        ...updateServiceDto,
+        thumbnail: isNotEmpty(thumbnail)
+          ? MulterUtils.convertPathToUrl(thumbnail.path)
+          : service.thumbnail, // Giữ lại ảnh cũ nếu không upload ảnh mới
+        images: arrayNotEmpty(images)
+          ? MulterUtils.convertArrayPathToUrl(images.map((item) => item.path))
+          : service.images, // Giữ lại danh sách ảnh cũ nếu không upload ảnh mới
+      });
+
+      // Lưu thông tin cập nhật
+      const savedService = await queryRunner.manager.save(updatedService);
 
       await queryRunner.commitTransaction();
-      return await this.findOne(id);
+      return savedService;
     } catch (error) {
+      console.error('Error occurred:', error);
+
+      // Xóa ảnh mới tải lên nếu xảy ra lỗi
+      if (isNotEmpty(thumbnail?.path)) {
+        MulterUtils.deleteFile(thumbnail.path);
+      }
+      if (arrayNotEmpty(images)) {
+        MulterUtils.deleteFiles(images.map((item) => item.path));
+      }
+
       await queryRunner.rollbackTransaction();
-      throw error;
+      throw new BadRequestException({
+        message: error.message,
+      });
     } finally {
       await queryRunner.release();
     }

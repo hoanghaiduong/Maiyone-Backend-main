@@ -11,6 +11,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { ServicesModule } from './services/services.module';
 import { ProvidersModule } from './providers/providers.module';
 import { PostsModule } from './posts/posts.module';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { PostsModule } from './posts/posts.module';
     ServicesModule,
     ProvidersModule,
     PostsModule,
+    StorageModule,
   ],
   controllers: [AppController],
   providers: [AppService],

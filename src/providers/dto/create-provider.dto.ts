@@ -1,13 +1,13 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateProviderDto {
   @ApiProperty({
     description: 'The new name of the provider',
     example: 'Updated Tech Solutions Co.',
-    required: false,
+    required: true,
   })
-  name?: string;
+  name: string;
 
   @ApiProperty({
     description: 'The updated description of the provider',
@@ -16,10 +16,11 @@ export class CreateProviderDto {
   })
   description?: string;
 
-  @ApiProperty({
-    description: 'The updated URL or path to the provider logo',
-    example: 'https://example.com/new-logo.png',
-    required: false,
+  @ApiPropertyOptional({
+    type: 'string',
+    format: 'binary',
   })
-  logo?: string;
+  @IsOptional()
+  
+  logo?: Express.Multer.File;
 }

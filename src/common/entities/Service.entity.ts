@@ -9,16 +9,17 @@ import {
 import { Category } from './Category.entity';
 import { Post } from 'src/common/entities/post.entity';
 import { Provider } from './Provider.entity';
+import { AuditableEntity } from './Audit.entity';
 
 @Entity()
-export class Service {
+export class Service extends AuditableEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column()
   name: string;
 
-  @Column({ nullable: false })
+  @Column({ nullable: false, unique: true })
   path: string;
   @Column({ nullable: true })
   description?: string;
@@ -26,6 +27,12 @@ export class Service {
   thumbnail?: string;
   @Column({ nullable: true, type: 'json' })
   images?: string[];
+
+  @OneToMany(() => Post, (post) => post.service, {
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  })
+  posts: Post[]; 
 
   @ManyToOne(() => Category, (category) => category.services, {
     nullable: false,

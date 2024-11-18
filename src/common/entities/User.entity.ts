@@ -13,7 +13,7 @@ import * as bcrypt from 'bcrypt';
 @Entity()
 export class User extends AuditableEntity {
   @PrimaryGeneratedColumn()
-  id: string;
+  id: number;
 
   @Column({ nullable: false })
   email: string;

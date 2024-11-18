@@ -26,9 +26,10 @@ export class UpdateUserDto extends PartialType(
   username?: string;
 
   @ApiProperty({
-    example: 'https://example.com/avatar.jpg',
-    description: 'Avatar URL of the user',
+    type: 'string',
+    format:'binary',
     nullable: true,
+    required:false
   })
   avatar?: string;
 
@@ -39,10 +40,4 @@ export class UpdateUserDto extends PartialType(
   })
   isLocked?: boolean;
 
-  @ApiProperty({
-    example: 'admin',
-    description: 'Role of the user',
-    nullable: true,
-  })
-  role?: string;
 }

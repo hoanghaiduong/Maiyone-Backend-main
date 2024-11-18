@@ -98,7 +98,7 @@ export class AuthService {
     return user;
   }
   async validateUserRefreshToken(
-    id: string,
+    id: number,
     refreshToken: string,
   ): Promise<void> {
     try {
